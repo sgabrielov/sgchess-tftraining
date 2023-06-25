@@ -6,10 +6,11 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from functions import loadCSV
+from functions import loadCSV, strip_checkmating_positions
 import FenTransformer
 
 position_data = loadCSV()
+position_data = strip_checkmating_positions(position_data)
 
 X_train_full, X_test, y_train_full, y_test = train_test_split(
     position_data['FEN'], 

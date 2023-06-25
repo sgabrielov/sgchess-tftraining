@@ -84,3 +84,7 @@ def convert_fen_to_bitboard(fen: str) -> list:
 
 def loadCSV(csv='chessData.csv.zip') -> pandas.DataFrame():
     return pandas.read_csv(SCRIPTLOCATION + '/' + csv)
+
+def strip_checkmating_positions(data: pandas.DataFrame()) -> pandas.DataFrame():
+    return data[data['Evaluation'].str.contains('#') == False]
+    
