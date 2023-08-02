@@ -23,9 +23,9 @@ X_train, X_valid, y_train, y_valid = train_test_split(
     random_state=4
 )
 
-mlp_reg = MLPRegressor(hidden_layer_sizes = [64, 16], random_state=42)
+#mlp_reg = MLPRegressor(hidden_layer_sizes = [5, 5], random_state=42)
 
-pipeline = make_pipeline(FenTransformer(), mlp_reg)
-pipeline.fit(X_train, y_train)
-y_pred = pipeline.predict(X_valid)
-rmse = mean_squared_error(y_valid, y_pred, squared=False)
+#pipeline = make_pipeline(FenTransformer(), mlp_reg)
+#pipeline.fit(X_train, y_train)
+#y_pred = pipeline.predict(X_valid)
+#rmse = mean_squared_error(y_valid, y_pred, squared=False)

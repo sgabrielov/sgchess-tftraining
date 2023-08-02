@@ -1,0 +1,9 @@
+
+white pieces
+p k b r q k
+
+black pieces
+P K B R Q K
+
+
+train_sample.loc[:,('FEN')] = train_sample.loc[:,('FEN')].transform(lambda x: convert_fen_to_bitboard(x))
