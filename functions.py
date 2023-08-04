@@ -1,5 +1,6 @@
 from kaggle.api.kaggle_api_extended import KaggleApi
 import json, os, sys, zipfile, chess, pandas, scipy, numpy, pickle
+from tqdm import tqdm
 
 
 # This file contains definitions for all useful library functons.
@@ -71,6 +72,9 @@ def convert_fen_to_bitboard(fen: pandas.Series) -> pandas.core.series.Series:
             A list of bool
     """
     
+    # The bitboard mapping is going to use 1 hot encoding - where each bit
+    # corresponds to a specific square, piece, and color
+    
     board = chess.Board(fen)
     outlist = []
     
@@ -94,9 +98,11 @@ def convert_fen_to_bitboard(fen: pandas.Series) -> pandas.core.series.Series:
     
     outlist.append(board.has_castling_rights(chess.BLACK))
     outlist.append(board.has_queenside_castling_rights(chess.BLACK))
+
     return pandas.Series(outlist)
 
-# deps: pandas
+# deps
+# import pandas
 # --> functions.py
 
 
@@ -108,39 +114,67 @@ def loadCSV(csv='chessData.csv.zip') -> pandas.DataFrame():
 
 def strip_nonnumeric_evaluations(data: pandas.DataFrame()) -> pandas.DataFrame():
     """Deletes all position data that have non numeric elements in evaluation
+    and converts to int
     """
     return data[data['Evaluation'].str.contains('[^0-9][+-]', regex=True) == False]
     
-def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
+def preprocess_position_data_old(data: pandas.DataFrame()) -> pandas.DataFrame():
+    # Couldn't get this method working correctly
+    
+    
     """Handles initial data processing before handing off to sklearn"""
-    
-    # Create a new dataframe with the necessary dimensions
-    # The number of features should be represented by the length of the bitboard
-    #   string after conversion. Based on the current encoding strategy, this
-    #   is going to equal 772
-    # Need to find a good way to calculate this length in case the strategy 
-    #   changes
-    
-    # The number of rows can be found using len(data.index)
-    
-    outdata = pandas.DataFrame()
-    
-    
+       
+    # Evaluation data is going to have strings containing # to indicate checkmating
+    #  sequences, and all kinds of other potential junk data.
+    # The chess-python module has functionality that can calculate checkmates,
+    # There's no need to teach the neural network these positions
+    # Therefore, these are going to be removed from the dataset in this step
     
     data = strip_nonnumeric_evaluations(data)
+    
+    # Cast these values which should always be numeric now into the appropriate type
     data.loc[:,('Evaluation')] = data.loc[:,('Evaluation')].astype('int')
     
-    data.loc[:,('FEN')] = data.loc[:,('FEN')].transform(lambda fen: convert_fen_to_bitboard(fen))
+    ###########
+    # WARNING #
+    ###########
+    
+    # Multiplying by 1 here to convert bools to 1s and 0s
+    # Pandas DataFrames don't like raw bools, so this is necessary to convert to
+    #   a sparse matrix
+    # However, this is a poor solution, need to find a better method utilizing 
+    #   pandas.DataFrame.astype(int)
+    
+    data.loc[:,('FEN')] = data.loc[:,('FEN')].transform(lambda fen: convert_fen_to_bitboard(fen)) * 1
     
     
     # WIP
     # this function currently returns a bunch of lists (pandas series)
     # instead of a proper sparse matrix
+
     
     return data
 
+def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
+    
+    # This is incredibly slow and bad and I should feel bad
+    
+    # probably dataframes aren't the best way to go about this,
+    # the issue is the kaggle dataframe only has one column for FEN, which
+    # when encoded turns into a bunch of columns
+    # I can't find a good in place way to shape the dataframe row by row,
+    # Maybe ndarray is a better way
+        
+    outdata = pandas.DataFrame()
+    for i in tqdm(data['FEN']):
+        outdata = pandas.concat([outdata, convert_fen_to_bitboard(i).to_frame().T])
+    
+    return outdata.astype(pandas.SparseDtype('bool', False))
+    
+    
+    
 # deps: pandas, pickle -> functions.py
-def save_dataframe(data: pandas.DataFrame(), filename: str):
+def save_dataframe(data: pandas.DataFrame(), filename: str, path=SCRIPTLOCATION):
     """
     Saves a dataframe directly to disk in order to avoid needing to download
     and process the CSV file each time
@@ -150,7 +184,7 @@ def save_dataframe(data: pandas.DataFrame(), filename: str):
         print("saved to %s" % (filename))
         
 # deps: pandas, pickle -> functions.py
-def load_dataframe(filename: str) -> pandas.DataFrame():
+def load_dataframe(filename: str, path=SCRIPTLOCATION) -> pandas.DataFrame():
     """
     Loads the contents of filename from disk into a pandas DataFrame
     Contents of filename must be a pandas dataframe serialized using pickle
@@ -158,3 +192,4 @@ def load_dataframe(filename: str) -> pandas.DataFrame():
     """
     with open(filename, 'rb') as fp:
         return pickle.load(fp)
+    
