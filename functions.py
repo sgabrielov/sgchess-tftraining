@@ -179,7 +179,7 @@ def save_dataframe(data: pandas.DataFrame(), filename: str, path=SCRIPTLOCATION)
     Saves a dataframe directly to disk in order to avoid needing to download
     and process the CSV file each time
     """
-    with open(filename, 'wb') as fp:
+    with open(path + '/' + filename, 'wb') as fp:
         pickle.dump(data, fp)
         print("saved to %s" % (filename))
         
@@ -190,6 +190,7 @@ def load_dataframe(filename: str, path=SCRIPTLOCATION) -> pandas.DataFrame():
     Contents of filename must be a pandas dataframe serialized using pickle
     Save a dataframe using save_dataframe method
     """
-    with open(filename, 'rb') as fp:
+
+    with open(path + '/' + filename, 'rb') as fp:
         return pickle.load(fp)
     
