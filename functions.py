@@ -164,12 +164,12 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     # when encoded turns into a bunch of columns
     # I can't find a good in place way to shape the dataframe row by row,
     # Maybe ndarray is a better way
-
+    
     outlist = []
     for i in tqdm(data['FEN']):
         outlist.append(convert_fen_to_bitboard(i))
     
-    outdata = pandas.DataFrame(outlist)
+    outdata = pandas.DataFrame(outlist, index=data.index)
     return outdata.astype(pandas.SparseDtype('bool', False))   
     
     
