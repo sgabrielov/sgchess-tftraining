@@ -169,7 +169,7 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     for i in tqdm(data['FEN']):
         outlist.append(convert_fen_to_bitboard(i))
     
-    outdata = pandas.DataFrame(outlist, index=data.index)
+    outdata = pandas.DataFrame(outlist, index=data['FEN'].index)
     return outdata.astype(pandas.SparseDtype('bool', False))   
     
     
