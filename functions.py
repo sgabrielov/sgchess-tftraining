@@ -11,6 +11,8 @@ from tqdm import tqdm
 SCRIPTLOCATION = "/home/ml/sgchess"
 # SCRIPTLOCATION = "~"
 
+EVAL_COL_NAME = "Evaluation"
+FEN_COL_NAME = "FEN"
 # deps: 
 # from kaggle.api.kaggle_api_extended import KaggleApi
 # import zipfile
@@ -112,15 +114,13 @@ def loadCSV(csv='chessData.csv.zip') -> pandas.DataFrame():
     """
     return pandas.read_csv(SCRIPTLOCATION + '/' + csv)
 
-def strip_nonnumeric_evaluations(data: pandas.DataFrame()) -> pandas.DataFrame():
+def strip_nonnumeric_evaluations(data: pandas.DataFrame(), key=EVAL_COL_NAME) -> pandas.DataFrame():
     """Deletes all position data that have non numeric elements in evaluation
     and converts to int
     """
-    return data[data['Evaluation'].str.contains('[^0-9][+-]', regex=True) == False]
+    return data[data[key].str.contains('[^0-9][+-]', regex=True) == False]
     
-def preprocess_position_data_old(data: pandas.DataFrame()) -> pandas.DataFrame():
-    # Couldn't get this method working correctly
-    
+def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():  
     
     """Handles initial data processing before handing off to sklearn"""
        
@@ -133,45 +133,114 @@ def preprocess_position_data_old(data: pandas.DataFrame()) -> pandas.DataFrame()
     data = strip_nonnumeric_evaluations(data)
     
     # Cast these values which should always be numeric now into the appropriate type
-    data.loc[:,('Evaluation')] = data.loc[:,('Evaluation')].astype('int')
+    #data.loc[:,(EVAL_COL_NAME)] = data.loc[:,(EVAL_COL_NAME)].astype('int')
+    cast_as(data)
     
-    ###########
-    # WARNING #
-    ###########
+    # Transform the dataframe
     
-    # Multiplying by 1 here to convert bools to 1s and 0s
-    # Pandas DataFrames don't like raw bools, so this is necessary to convert to
-    #   a sparse matrix
-    # However, this is a poor solution, need to find a better method utilizing 
-    #   pandas.DataFrame.astype(int)
-    
-    data.loc[:,('FEN')] = data.loc[:,('FEN')].transform(lambda fen: convert_fen_to_bitboard(fen)) * 1
-    
-    
-    # WIP
-    # this function currently returns a bunch of lists (pandas series)
-    # instead of a proper sparse matrix
-
-    
-    return data
-
-def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
-    
-    # This is incredibly slow and bad and I should feel bad
-    
-    # probably dataframes aren't the best way to go about this,
-    # the issue is the kaggle dataframe only has one column for FEN, which
-    # when encoded turns into a bunch of columns
-    # I can't find a good in place way to shape the dataframe row by row,
-    # Maybe ndarray is a better way
-    
+    # Create a temporary list while constructing the frame
     outlist = []
-    for i in tqdm(data['FEN']):
+    
+    # tqdm adds a progress tracker to output
+    
+    for i in tqdm(data[FEN_COL_NAME]):
+        # convert the fen string to a bitboard mapping and save it to the temp list
         outlist.append(convert_fen_to_bitboard(i))
     
-    outdata = pandas.DataFrame(outlist, index=data['FEN'].index)
-    return outdata.astype(pandas.SparseDtype('bool', False))   
+    # create the output dataframe and load in the temp data
+    outdata = pandas.DataFrame(outlist, index=data[FEN_COL_NAME].index)
     
+    # convert the dataframe into sparse type for memory efficiency and return
+    return outdata.astype(pandas.SparseDtype('bool', False))   
+
+# def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
+    
+#     # This is incredibly slow and bad and I should feel bad
+    
+#     # probably dataframes aren't the best way to go about this,
+#     # the issue is the kaggle dataframe only has one column for FEN, which
+#     # when encoded turns into a bunch of columns
+#     # I can't find a good in place way to shape the dataframe row by row,
+#     # Maybe ndarray is a better way
+    
+#     outlist = []
+#     for i in tqdm(data['FEN']):
+#         outlist.append(convert_fen_to_bitboard(i))
+    
+#     outdata = pandas.DataFrame(outlist, index=data['FEN'].index)
+#     return outdata.astype(pandas.SparseDtype('bool', False))   
+def cast_as(data: pandas.DataFrame(), key=EVAL_COL_NAME, casttype=int):
+    """
+    Change the type of a column in the dataframe
+
+    Parameters
+    ----------
+    data : pandas.DataFrame()
+        The dataframe
+    key : str, optional
+        The key of column that should be cast as casttype
+    casttype : type, optional
+        What type the value should be. The default is int.
+
+    Returns
+    -------
+    None.
+
+    """
+    data.loc[:,(key)] = data.loc[:,(key)].astype(casttype)
+
+def preprocess_position_data_batch(data: pandas.DataFrame(), batch_size=100_000, max_batches=10_000, save_loc=SCRIPTLOCATION, filename="dataprocessed.p"):
+    """
+    An optional method of handling the data preprocessing in batches
+    This is necessary to process an exceptionally large ( > 10M ) dataset
+    
+    If the batch size is set too small, this could create a lot of files!
+
+    Parameters
+    ----------
+    data : pandas.DataFrame()
+        The dataframe.
+    batch_size : int, optional
+        The number of rows to process per batch. The default is 100_000: int.
+    max_batches : int, optional
+        The maximum number of batches (and therefore files) allowed. The default is 10_000: int.
+    save_loc : str, optional
+        The path to save to. The default is SCRIPTLOCATION: str.
+    filename : str, optional
+        The name of the file. The default is "dataprocessed.p":str.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    batches = len(data)//batch_size + 1
+    if batches > max_batches:
+         raise ValueError(f'batches exceeds max_batches: {batches} > {max_batches}')
+    if len(data) % batch_size == 0:
+        batches = batches - 1
+    for i in range(0, batches):
+        
+        
+        dataprocessed = preprocess_position_data(data.iloc[i*batch_size:(i+1)*batch_size])
+        
+        print("saving batch to " + save_loc + "/" +  str(i) + filename)
+        save_dataframe(dataprocessed,  str(i) + filename, save_loc)
+    
+    
+def load_position_data_batch(filename: str, load_loc=SCRIPTLOCATION) -> pandas.DataFrame():
+    """
+    Load the dataframe located in batched files that contain filename.
+    """
+    frames = []
+    files = [f for f in os.listdir() if filename in f]
+    files.sort()
+    
+    for i in files:
+        frames.append(load_dataframe(i))
+        
+    return pandas.concat(frames)
     
     
 # deps: pandas, pickle -> functions.py
