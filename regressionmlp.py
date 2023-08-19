@@ -6,16 +6,16 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from functions import loadCSV, strip_nonnumeric_evaluations, preprocess_position_data, load_dataframe, standardize, destandardize
+from functions import loadCSV, preprocess_position_data, load_dataframe, standardize, destandardize
 import FenTransformer
 
 position_data = load_dataframe("datatrimmed.p")
-position_data = strip_nonnumeric_evaluations(position_data)
+position_data = preprocess_position_data(position_data)
 evals = position_data['Evaluation']
 orig = evals.copy()
 
 X_train_full, X_test, y_train_full, y_test = train_test_split(
-    preprocess_position_data(position_data), 
+    position_data.drop(['Evaluation']), 
     standardize(evals),
 )
 

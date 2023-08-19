@@ -149,6 +149,7 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     
     # create the output dataframe and load in the temp data
     outdata = pandas.DataFrame(outlist, index=data[FEN_COL_NAME].index)
+    outdata[EVAL_COL_NAME] = data[EVAL_COL_NAME]
     
     # convert the dataframe into sparse type for memory efficiency and return
     return outdata.astype(pandas.SparseDtype('bool', False))   
