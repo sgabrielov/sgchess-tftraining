@@ -6,16 +6,28 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from functions import loadCSV, preprocess_position_data, load_dataframe, standardize, destandardize
+from functions import loadCSV, preprocess_position_data, load_dataframe, standardize, destandardize, strip_nonnumeric_evaluations, cast_as
 import FenTransformer
 
 position_data = load_dataframe("datatrimmed.p")
-position_data = preprocess_position_data(position_data)
+
+# Evaluation data is going to have strings containing # to indicate checkmating
+#  sequences, and all kinds of other potential junk data.
+# The chess-python module has functionality that can calculate checkmates,
+# There's no need to teach the neural network these positions
+# Therefore, these are going to be removed from the dataset in this step
+
+position_data = strip_nonnumeric_evaluations(position_data)
+
+# Cast these values which should always be numeric now into the appropriate type
+#data.loc[:,(EVAL_COL_NAME)] = data.loc[:,(EVAL_COL_NAME)].astype('int')
+cast_as(position_data)
+
 evals = position_data['Evaluation']
 orig = evals.copy()
 
 X_train_full, X_test, y_train_full, y_test = train_test_split(
-    position_data.drop(['Evaluation']), 
+    preprocess_position_data(position_data), 
     standardize(evals),
 )
 

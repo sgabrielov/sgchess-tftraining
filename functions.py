@@ -124,17 +124,7 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     
     """Handles initial data processing before handing off to sklearn"""
        
-    # Evaluation data is going to have strings containing # to indicate checkmating
-    #  sequences, and all kinds of other potential junk data.
-    # The chess-python module has functionality that can calculate checkmates,
-    # There's no need to teach the neural network these positions
-    # Therefore, these are going to be removed from the dataset in this step
-    
-    data = strip_nonnumeric_evaluations(data)
-    
-    # Cast these values which should always be numeric now into the appropriate type
-    #data.loc[:,(EVAL_COL_NAME)] = data.loc[:,(EVAL_COL_NAME)].astype('int')
-    cast_as(data)
+
     
     # Transform the dataframe
     
@@ -149,7 +139,6 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     
     # create the output dataframe and load in the temp data
     outdata = pandas.DataFrame(outlist, index=data[FEN_COL_NAME].index)
-    outdata[EVAL_COL_NAME] = data[EVAL_COL_NAME]
     
     # convert the dataframe into sparse type for memory efficiency and return
     return outdata.astype(pandas.SparseDtype('bool', False))   
