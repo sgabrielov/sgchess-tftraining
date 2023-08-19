@@ -58,7 +58,7 @@ def load_json(filename: str, path: str) -> object:
 
 # --> chess_functions.py
 
-def convert_fen_to_bitboard(fen: pandas.Series) -> pandas.core.series.Series:
+def convert_fen_to_bitboard(fen: pandas.core.series.Series) -> pandas.core.series.Series:
     
     
     """Converts a fen string to a bitboard mapping
@@ -263,4 +263,12 @@ def load_dataframe(filename: str, path=SCRIPTLOCATION) -> pandas.DataFrame():
 
     with open(path + '/' + filename, 'rb') as fp:
         return pickle.load(fp)
+    
+def standardize(data: pandas.Series) -> pandas.Series:
+    return (data - data.mean()) / data.std()
+
+def destandardize(data: pandas.Series, orig: pandas.Series) -> pandas.Series:
+    return data * orig.std() + orig.mean()
+ 
+              
     
