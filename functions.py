@@ -215,13 +215,15 @@ def preprocess_position_data_batch(data: pandas.DataFrame(), batch_size=100_000,
          raise ValueError(f'batches exceeds max_batches: {batches} > {max_batches}')
     if len(data) % batch_size == 0:
         batches = batches - 1
+    padding = batches**(1/10)
     for i in range(0, batches):
         
         
         dataprocessed = preprocess_position_data(data.iloc[i*batch_size:(i+1)*batch_size])
+        savename = str(i).zfill(padding) + filename
         
-        print("saving batch to " + save_loc + "/" +  str(i) + filename)
-        save_dataframe(dataprocessed,  str(i) + filename, save_loc)
+        print("saving batch to " + save_loc + "/" +  savename)
+        save_dataframe(dataprocessed,  savename, save_loc)
     
     
 def load_position_data_batch(filename: str, load_loc=SCRIPTLOCATION) -> pandas.DataFrame():
