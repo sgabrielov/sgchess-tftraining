@@ -3,6 +3,7 @@ import json, os, sys, zipfile, chess, pandas, scipy, numpy, pickle
 from tqdm import tqdm
 
 
+
 # This file contains definitions for all useful library functons.
 # Eventually, these will be split into separate files according to which
 # modules they depend on 
@@ -13,6 +14,10 @@ SCRIPTLOCATION = "/home/ml/sgchess"
 
 EVAL_COL_NAME = "Evaluation"
 FEN_COL_NAME = "FEN"
+
+if SCRIPTLOCATION not in sys.path:
+    sys.path.append(SCRIPTLOCATION)
+    
 # deps: 
 # from kaggle.api.kaggle_api_extended import KaggleApi
 # import zipfile
@@ -224,11 +229,11 @@ def load_position_data_batch(filename: str, load_loc=SCRIPTLOCATION) -> pandas.D
     Load the dataframe located in batched files that contain filename.
     """
     frames = []
-    files = [f for f in os.listdir() if filename in f]
+    files = [f for f in os.listdir(load_loc) if filename in f]
     files.sort()
     
     for i in files:
-        frames.append(load_dataframe(i))
+        frames.append(load_dataframe(i, load_loc))
         
     return pandas.concat(frames)
     
