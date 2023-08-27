@@ -1,6 +1,7 @@
 from kaggle.api.kaggle_api_extended import KaggleApi
 import json, os, sys, zipfile, chess, pandas, scipy, numpy, pickle
 from tqdm import tqdm
+import math
 
 
 
@@ -14,6 +15,8 @@ SCRIPTLOCATION = "/home/ml/sgchess"
 
 EVAL_COL_NAME = "Evaluation"
 FEN_COL_NAME = "FEN"
+
+
 
 if SCRIPTLOCATION not in sys.path:
     sys.path.append(SCRIPTLOCATION)
@@ -54,7 +57,7 @@ def load_json(filename: str, path: str) -> object:
     """Load config settings from the given json file
     Returns the decoded python object
     """
-    with open(path+filename, "r") as infile:
+    with open(path+'/'+filename, "r") as infile:
         data = infile.read()
     return json.loads(data)
 
@@ -129,7 +132,6 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     
     """Handles initial data processing before handing off to sklearn"""
        
-
     
     # Transform the dataframe
     
@@ -142,28 +144,17 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
         # convert the fen string to a bitboard mapping and save it to the temp list
         outlist.append(convert_fen_to_bitboard(i))
     
+    # get the list of columns for the new dataframe
+    with open(SCRIPTLOCATION + '/cols.json') as infile:
+        cols = json.load(infile)
+    
     # create the output dataframe and load in the temp data
-    outdata = pandas.DataFrame(outlist, index=data[FEN_COL_NAME].index)
+    outdata = pandas.DataFrame(outlist, index=data[FEN_COL_NAME].index, columns=cols)
     
     # convert the dataframe into sparse type for memory efficiency and return
     return outdata.astype(pandas.SparseDtype('bool', False))   
 
-# def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     
-#     # This is incredibly slow and bad and I should feel bad
-    
-#     # probably dataframes aren't the best way to go about this,
-#     # the issue is the kaggle dataframe only has one column for FEN, which
-#     # when encoded turns into a bunch of columns
-#     # I can't find a good in place way to shape the dataframe row by row,
-#     # Maybe ndarray is a better way
-    
-#     outlist = []
-#     for i in tqdm(data['FEN']):
-#         outlist.append(convert_fen_to_bitboard(i))
-    
-#     outdata = pandas.DataFrame(outlist, index=data['FEN'].index)
-#     return outdata.astype(pandas.SparseDtype('bool', False))   
 def cast_as(data: pandas.DataFrame(), key=EVAL_COL_NAME, casttype=int):
     """
     Change the type of a column in the dataframe
@@ -210,19 +201,42 @@ def preprocess_position_data_batch(data: pandas.DataFrame(), batch_size=100_000,
 
     """
     
+    # identify the number of batches/iterations to process/files to create
     batches = len(data)//batch_size + 1
+    
+    # if the number of iterations exceeds the number allowed by the user
     if batches > max_batches:
          raise ValueError(f'batches exceeds max_batches: {batches} > {max_batches}')
+    
+    # In order to ensure sortable filenames, pad the prefix with 0s according to
+    # the length of the longest prefix
+    #   -> is the # of digits of the largest prefix
+    #       -> is the base 10 log of batches
+    padding = math.ceil(math.log(batches, 10))
+    
+    # if the batch size is a perfect divisor of the number of data samples
     if len(data) % batch_size == 0:
         batches = batches - 1
-    padding = batches**(1/10)
+    
+    # start generating the files
+    print("Writing files to " + save_loc + "/")
+    print(f'# of records:\t{len(data)}')
+    print(f'# of batches:\t{batches}')
+    print(f'first filename:\t{str(0).zfill(padding) + filename}')
+    print(f'last filename:\t{str(batches).zfill(padding) + filename}')
+    
     for i in range(0, batches):
         
-        
+        # preprocess each batch
         dataprocessed = preprocess_position_data(data.iloc[i*batch_size:(i+1)*batch_size])
+        
+        # generate the filename to save to
         savename = str(i).zfill(padding) + filename
         
+        # print the save file to the user
         print("saving batch to " + save_loc + "/" +  savename)
+        
+        # save the batches data to the file
         save_dataframe(dataprocessed,  savename, save_loc)
     
     
@@ -231,12 +245,22 @@ def load_position_data_batch(filename: str, load_loc=SCRIPTLOCATION) -> pandas.D
     Load the dataframe located in batched files that contain filename.
     """
     frames = []
+    # get all the files in load_loc that contain filename
+    # there is no mechanism to prevent unwanted/junk files from getting loaded this way
+    # the safest way to use this function is to make dedicate directories to save 
+    #   to when using save_dataframe
+    # and to only attempt to load from these directories
     files = [f for f in os.listdir(load_loc) if filename in f]
+    
+    # os.listdir returns files out of order. sorting the file list will ensure
+    # the indices of the data will be in the same order as when they were saved
     files.sort()
     
+    # build a list of partial dataframes
     for i in files:
         frames.append(load_dataframe(i, load_loc))
-        
+    
+    # concatenate the list of partial dataframes into one and return
     return pandas.concat(frames)
     
     
