@@ -66,7 +66,7 @@ def load_json(filename: str, path: str) -> object:
 
 # --> chess_functions.py
 
-def convert_fen_to_bitboard(fen: pandas.core.series.Series) -> pandas.core.series.Series:
+def convert_fen_to_bitboard(fen, cols) -> pandas.core.series.Series:
     
     
     """Converts a fen string to a bitboard mapping
@@ -88,7 +88,6 @@ def convert_fen_to_bitboard(fen: pandas.core.series.Series) -> pandas.core.serie
     board = chess.Board(fen)
     outlist = []
     
-    
     # encode white pieces
     # in python-chess chess.WHITE = True and chess.BLACK = False
     # chess.Pawn = 1, King = 6, etc
@@ -109,7 +108,7 @@ def convert_fen_to_bitboard(fen: pandas.core.series.Series) -> pandas.core.serie
     outlist.append(board.has_castling_rights(chess.BLACK))
     outlist.append(board.has_queenside_castling_rights(chess.BLACK))
 
-    return pandas.Series(outlist)
+    return pandas.Series(outlist, index=cols, dtype=bool)
 
 # deps
 # import pandas
@@ -149,12 +148,33 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
         cols = json.load(infile)
     
     # create the output dataframe and load in the temp data
-    outdata = pandas.DataFrame(outlist, index=data[FEN_COL_NAME].index, columns=cols)
+    outdata = pandas.DataFrame(data=outlist, index=data[FEN_COL_NAME].index, columns=cols)
     
     # convert the dataframe into sparse type for memory efficiency and return
     return outdata.astype(pandas.SparseDtype('bool', False))   
 
+# v2 of preprocess logic
+# so far this is working much better
+def preprocess_position_data2(data: pandas.DataFrame()) -> pandas.DataFrame():
     
+    # get column labels from json fie
+    with open(SCRIPTLOCATION + '/cols.json') as infile:
+        cols = json.load(infile)
+    
+    # run convert_fen_to_bitboard functions accross all rows of data, the input parameter
+    # convert the resulting dataframe into sparse type
+    # the columns labels of the new dataframe will be set to cols
+    
+    # this function can handle input in the form of either a dataframe or a series. 
+    # either way it will return a dataframe
+    # any other type will raise a ValueError
+    if isinstance(data, pandas.core.frame.DataFrame):
+        return data[FEN_COL_NAME].apply(lambda fen: convert_fen_to_bitboard(fen, cols)).astype(pandas.SparseDtype('bool', False))
+    elif isinstance(data, pandas.core.series.Series):
+        return data.apply(lambda fen: convert_fen_to_bitboard(fen, cols)).astype(pandas.SparseDtype('bool', False))
+    else:
+        raise ValueError(f'Unable to handle input data type. Expected pandas Series or DataFrame, received {type(data)}')
+        
 def cast_as(data: pandas.DataFrame(), key=EVAL_COL_NAME, casttype=int):
     """
     Change the type of a column in the dataframe
