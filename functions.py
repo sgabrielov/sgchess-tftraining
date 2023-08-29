@@ -127,7 +127,7 @@ def strip_nonnumeric_evaluations(data: pandas.DataFrame(), key=EVAL_COL_NAME) ->
     """
     return data[data[key].str.contains('[^0-9][+-]', regex=True) == False]
     
-def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():  
+def preprocess_position_data_old(data: pandas.DataFrame()) -> pandas.DataFrame():  
     
     """Handles initial data processing before handing off to sklearn"""
        
@@ -155,7 +155,7 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
 
 # v2 of preprocess logic
 # so far this is working much better
-def preprocess_position_data2(data: pandas.DataFrame()) -> pandas.DataFrame():
+def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     
     # get column labels from json fie
     with open(SCRIPTLOCATION + '/cols.json') as infile:
