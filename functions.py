@@ -169,9 +169,9 @@ def preprocess_position_data(data: pandas.DataFrame()) -> pandas.DataFrame():
     # either way it will return a dataframe
     # any other type will raise a ValueError
     if isinstance(data, pandas.core.frame.DataFrame):
-        return data[FEN_COL_NAME].apply(lambda fen: convert_fen_to_bitboard(fen, cols)).astype(pandas.SparseDtype('bool', False))
+        return data[FEN_COL_NAME].apply(lambda fen: convert_fen_to_bitboard(fen, cols))
     elif isinstance(data, pandas.core.series.Series):
-        return data.apply(lambda fen: convert_fen_to_bitboard(fen, cols)).astype(pandas.SparseDtype('bool', False))
+        return data.apply(lambda fen: convert_fen_to_bitboard(fen, cols))
     else:
         raise ValueError(f'Unable to handle input data type. Expected pandas Series or DataFrame, received {type(data)}')
         
