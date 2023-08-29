@@ -66,7 +66,7 @@ def load_json(filename: str, path: str) -> object:
 
 # --> chess_functions.py
 
-def convert_fen_to_bitboard(fen, cols) -> pandas.core.series.Series:
+def convert_fen_to_bitboard(fen, cols=None) -> pandas.core.series.Series:
     
     
     """Converts a fen string to a bitboard mapping
