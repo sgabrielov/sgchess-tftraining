@@ -53,7 +53,7 @@ def download_kaggle_data(url: str, file: str, path: str, competition=False):
 
 # --> functions.py
 
-def load_json(filename: str, path: str) -> object:
+def load_json(filename: str, path=SCRIPTLOCATION) -> object:
     """Load config settings from the given json file
     Returns the decoded python object
     """
