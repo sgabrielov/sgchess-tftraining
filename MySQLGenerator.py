@@ -30,7 +30,6 @@ class MySQLGenerator(tf.keras.utils.Sequence):
             The number of rows to return for each call to the generator.
         shuffle : TYPE, optional
             Whether to shuffle the data upon retrieval. The default is True.
-
         Returns
         -------
         None.
@@ -103,9 +102,8 @@ class MySQLGenerator(tf.keras.utils.Sequence):
         
         # Close the cursor
         cursor.close()
-
+        
         return X, y
     
     def __len__(self):
         return self.n // self.batch_size
-    
