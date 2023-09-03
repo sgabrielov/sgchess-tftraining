@@ -13,7 +13,7 @@ class MySQLGenerator(tf.keras.utils.Sequence):
         ----------
         sql_connection : mysql.connector.connection.MySQLConnection
             An active connection to a MySQL database.
-            Use mysql.connector.MySQLConnect(...)
+            Use mysql.connector.MySQLConnection(...)
         table : str
             The name of the table or view to pull data from.
         index_col : str
@@ -49,7 +49,18 @@ class MySQLGenerator(tf.keras.utils.Sequence):
         self.sql_connection = sql_connection
    
         self.on_epoch_end()
+    def __get_count(self):
         
+        cursor = self.sql_connection.cursor(buffered = True)        
+        query = f'SELECT COUNT(`{self.index_col}`) FROM {self.table} WHERE `{self.index_col}` BETWEEN {self.min_row} AND {self.max_row};'
+        cursor.execute(query)
+        
+        result = cursor.fetchall()
+        
+        cursor.close()
+        
+        return result[0][0]
+    
     def on_epoch_end(self):
         """
         Retrieves indices from database and shuffles if Shuffle=True
@@ -61,7 +72,7 @@ class MySQLGenerator(tf.keras.utils.Sequence):
         """
         
         # Create a cursor
-        cursor = self.sql_connection.cursor()
+        cursor = self.sql_connection.cursor(buffered = True)
         
         # Construct the query
         query = f'SELECT `{self.index_col}` FROM `{self.table}` WHERE `{self.index_col}` BETWEEN {self.min_row} AND {self.max_row} LIMIT {self.n};'
