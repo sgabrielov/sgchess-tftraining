@@ -41,13 +41,12 @@ class MySQLGenerator(tf.keras.utils.Sequence):
         self.shuffle = shuffle
         self.min_row = min_row
         self.max_row = max_row
-        self.n = self.__get_count()
+        self.sql_connection = sql_connection
         self.X_cols = X_cols
         self.y_cols = y_cols
         self.table = table
         self.index_col = index_col        
-        self.sql_connection = sql_connection
-   
+        self.n = self.__get_count()
         self.on_epoch_end()
     def __get_count(self):
         
